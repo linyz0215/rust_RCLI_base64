@@ -1,12 +1,21 @@
-use clap::Parser;
-use RCLI::{Opts, SubCommand,process_csv};
+use std::any;
 
-fn main() -> Result<(),anyhow::Error> {
+use clap::Parser;
+
+use RCLI::{Opts, SubCommand, process_csv};
+use anyhow::Result;
+
+fn main() -> Result<()> {
     let opts = Opts::parse();
     println!("{:?}", opts);
     match opts.cmd {
         SubCommand::Csv(opts) => {
-            process_csv(&opts.input, &opts.output)?;
+            let output = if let Some(output) = opts.output {
+                output.clone()
+            } else {
+                format!("output.{}",opts.format)
+            };
+            process_csv(&opts.input, output,opts.format)?;
         }
     }
     Ok(())

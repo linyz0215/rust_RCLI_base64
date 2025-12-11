@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{fmt,path::Path, str::FromStr};
 
 use clap::Parser;
 #[derive(Debug, Parser)]
@@ -13,13 +13,23 @@ pub enum SubCommand {
     #[command(name = "csv", about = "Show CSVS, or Convert CSV to other formats")]
     Csv(CsvOpts),
 }
+
+#[derive(Debug, Clone)]
+pub enum OutputFormat {
+    Json,
+    Yaml,
+}
+
 #[derive(Debug, Parser)]
 pub struct CsvOpts {
     #[arg(short, long, value_parser = verify_input_file)]
     pub input: String,
 
-    #[arg(short, long, default_value = "output.json")]
-    pub output: String,
+    #[arg(short, long)]
+    pub output: Option<String>,
+
+    #[arg(long, value_parser = parse_format, default_value = "json")]
+    pub format: OutputFormat,
 
     #[arg(short, long, default_value_t = ',')]
     pub delimiter: char,
@@ -37,3 +47,45 @@ fn verify_input_file(filename: &str) -> Result<String, &'static str> {
     }
 }
 //生命周期 box::leak,'static 
+
+// fn parse_format(format: &str) -> Result<OutputFormat, &'static str> {
+//     match format.to_lowercase().as_str() {
+//         "json" => Ok(OutputFormat::Json),
+//         "toml" => Ok(OutputFormat::Toml),
+//         "yaml" | "yml" => Ok(OutputFormat::Yaml),
+//         _ => Err("Unsupported output format. Supported formats are: json, toml, yaml."),
+//     }
+// }
+
+fn parse_format(format: &str) -> Result<OutputFormat, anyhow::Error> {//这个anyhow::Error能转成&'static str
+    format.parse()//parse调用FromStr trait 将字符串转换成其他类型（前提是要实现FromStr）
+}
+
+impl From<OutputFormat> for &'static str {//把枚举值转换成对应的静态字符串字面量
+    fn from(format: OutputFormat) -> Self {//实现了From trait后 可以用Into trait自动转换，也就是说可以从OutputFormat转换成&'static str
+                                           //也可以从&'static str转换成OutputFormat
+        match format {
+            OutputFormat::Json => "json",
+            OutputFormat::Yaml => "yaml",
+        }
+    }
+}
+
+impl FromStr for OutputFormat {//从字符串到枚举的转换
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "json" => Ok(OutputFormat::Json),
+            "yaml" | "yml" => Ok(OutputFormat::Yaml),
+            _ => Err(anyhow::anyhow!("Unsupported output format. Supported formats are: json, toml, yaml.")),
+        }
+    }
+}
+
+
+impl fmt::Display for OutputFormat {//实现Display trait 用于格式化输出
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"{}",Into::<&str>::into(self.clone()))
+    }
+}

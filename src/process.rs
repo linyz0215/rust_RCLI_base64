@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
-
+use toml::ser;
+use std::fs;
 use csv::Reader;
 use anyhow::Result;
-
-
+use serde_json::Value;
+use serde_json::json;
+use crate::opts::OutputFormat;
 #[derive(Debug, Serialize, Deserialize)]
 
 struct Player {
@@ -19,16 +21,28 @@ struct Player {
     kit: u8,
 }
 
-pub fn process_csv(input: &str, output: &str) -> Result<()> {
+pub fn process_csv(input: &str, output: String, format: OutputFormat) -> Result<()> {
     let mut reader = Reader::from_path(input)?;
     let mut ret = Vec::with_capacity(128);
-    for result in reader.deserialize() {
-        let record: Player = result?;
-        ret.push(record);
-        }
+    let headers = reader.headers()?.clone();
+    for result in reader.records() {//two mutable borrow issue 用clone()
+        //1、
+        let record= result?;
+        let iter = headers.iter().zip(record.iter());
 
-    let json = serde_json::to_string_pretty(&ret)?;
-    std::fs::write(output, json)?;
+        let json_value = headers.iter().zip(record.iter()).collect::<Value>();
 
+        ret.push(json_value);
+    }
+
+    let content = match format {
+        OutputFormat::Json => {
+            serde_json::to_string_pretty(&ret)?
+        },
+        OutputFormat::Yaml => {
+            serde_yaml::to_string(&ret)?
+        },
+    };
+    fs::write(output, content)?;
     Ok(())
 }
