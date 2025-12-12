@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use RCLI::{Opts, SubCommand, process_csv};
+use RCLI::{Opts, SubCommand, process_csv, process_genpass};
 use anyhow::Result;
 
 fn main() -> Result<()> {
@@ -14,6 +14,10 @@ fn main() -> Result<()> {
                 format!("output.{}",opts.format.as_str())//直接实现OutputFormat的as_str方法
             };
             process_csv(&opts.input, output,opts.format)?;
+        }
+
+        SubCommand::GenPass(opts) => {
+            process_genpass(opts.length, opts.uppercase, opts.lowercase, opts.numbers, opts.symbols)?;
         }
     }
     Ok(())
