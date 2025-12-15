@@ -5,7 +5,6 @@ use anyhow::Result;
 
 fn main() -> Result<()> {
     let opts = Opts::parse();
-    println!("{:?}", opts);
     match opts.cmd {
         SubCommand::Csv(opts) => {
             let output = if let Some(output) = opts.output {//output类型为Option<String> Some or None
